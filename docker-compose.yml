@@ -1,0 +1,56 @@
+# docker network create --attachable --subnet 192.168.16.0/24 -d bridge analytics
+version: '3.7'
+
+services:
+  order-manager-db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'order-manager-db'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'admin'
+      MYSQL_ROOT_PASSWORD: 'admin'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - order-manager-db:/var/lib/mysql
+    networks:
+      - backend
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - target: 2181
+        published: 2181
+        protocol: tcp
+        mode: host
+    networks:
+      - backend
+
+  kafka:
+    depends_on:
+      - zookeeper
+    image: wurstmeister/kafka
+    container_name: kafka
+    ports:
+      - target: 9092
+        published: 9092
+        protocol: tcp
+        mode: host
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CREATE_TOPICS: "order-events:1:1"
+    volumes:
+      - ./:/etc/kafka
+    networks:
+      - backend
+
+volumes:
+  order-manager-db:
+networks:
+  backend:
+    name: backend
