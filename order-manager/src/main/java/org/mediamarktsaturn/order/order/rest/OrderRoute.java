@@ -82,7 +82,7 @@ public class OrderRoute {
                 if (performed.isPresent())
                     return complete(StatusCodes.OK, performed.get(), Jackson.marshaller());
                 else
-                    return complete(StatusCodes.NOT_FOUND);
+                    return complete(StatusCodes.NOT_FOUND, "Order with Id " + orderId + " does not exist");
             });
         });
     }
@@ -96,7 +96,7 @@ public class OrderRoute {
                 if (performed.isPresent())
                     return complete(StatusCodes.OK, performed.get(), Jackson.marshaller());
                 else
-                    return complete(StatusCodes.NOT_FOUND);
+                    return complete(StatusCodes.NOT_FOUND, "Order with Id " + orderId + " does not exist");
             });
         });
     }
@@ -110,7 +110,7 @@ public class OrderRoute {
                 if (performed.isPresent())
                     return complete(StatusCodes.OK, performed.get(), Jackson.marshaller());
                 else
-                    return complete(StatusCodes.NOT_FOUND);
+                    return complete(StatusCodes.NOT_FOUND, "Order with Id " + id + " does not exist");
             });
         });
     }

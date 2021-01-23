@@ -11,7 +11,7 @@ import lombok.Setter;
 public final class GetOrderPaymentInfoCommand implements OrderCommand {
     private final Long orderId;
     @Setter
-    private boolean isPersisted = false;
+    private boolean isPersisted = true;
 
     @Override
     public String getPersistenceKey() {

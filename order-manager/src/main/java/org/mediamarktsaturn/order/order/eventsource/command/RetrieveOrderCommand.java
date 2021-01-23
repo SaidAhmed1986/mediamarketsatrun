@@ -9,7 +9,7 @@ import lombok.Setter;
 public final class RetrieveOrderCommand implements OrderCommand {
     private final Long orderId;
     @Setter
-    private boolean isPersisted = false;
+    private boolean isPersisted = true;
 
     @Override
     public String getPersistenceKey() {
