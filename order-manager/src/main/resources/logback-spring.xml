@@ -34,4 +34,6 @@
         <appender-ref ref="Console" />
     </root>
 
+    <logger name="org.apache.kafka" level="ERROR"/>
+    <logger name="org.apache.kafka.common.metrics" level="ERROR"/>
 </configuration>

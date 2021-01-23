@@ -1,6 +1,5 @@
 package org.mediamarktsaturn.order.order.eventsource.command;
 
-import akka.actor.ActorRef;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,6 @@ import java.util.Optional;
 @AllArgsConstructor
 public class CreateOrderCommand implements OrderCommand {
     private final OrderDetailsDto order;
-    private final ActorRef replyTo;
     @Setter
     private boolean isPersisted = false;
 

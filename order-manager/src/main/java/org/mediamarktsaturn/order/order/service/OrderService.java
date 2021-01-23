@@ -7,11 +7,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mediamarktsaturn.order.order.dto.OrderDetailsDto;
 import org.mediamarktsaturn.order.order.dto.OrderStatus;
+import org.mediamarktsaturn.order.order.exception.OrderManagerException;
 import org.mediamarktsaturn.order.order.model.Order;
 import org.mediamarktsaturn.order.order.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityNotFoundException;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -49,15 +49,15 @@ public class OrderService {
         try {
             orderDetails = ORDER_CACHE.get(orderId);
         } catch (Exception e) {
-            log.error("Failed to load order with id {}, {}", orderId, e);
+            log.error("Failed to load order with id {}, {}", orderId, e.getMessage());
         }
         return orderDetails;
     }
 
-    public OrderDetailsDto updateOrderStatus(Long orderId, OrderStatus newStatus){
+    public OrderDetailsDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Optional<Order> existingOrderOp = orderRepository.findById(orderId);
         if (existingOrderOp.isEmpty()) {
-            throw new EntityNotFoundException("Order with id " + orderId + " does not exist");
+            throw new OrderManagerException("Order with id " + orderId + " does not exist", 404);
         }
         Order existingOrder = existingOrderOp.get();
         existingOrder.setStatus(newStatus);

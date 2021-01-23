@@ -1,6 +1,9 @@
 package org.mediamarktsaturn.order.order.actor;
 
 import akka.actor.AbstractLoggingActor;
+import akka.actor.OneForOneStrategy;
+import akka.actor.SupervisorStrategy;
+import akka.japi.pf.DeciderBuilder;
 import lombok.RequiredArgsConstructor;
 import org.mediamarktsaturn.order.order.dto.OrderDetailsDto;
 import org.mediamarktsaturn.order.order.eventsource.command.CreateOrderCommand;
@@ -10,12 +13,14 @@ import org.mediamarktsaturn.order.order.eventsource.command.RetrieveOrderCommand
 import org.mediamarktsaturn.order.order.eventsource.command.UpdateOrderStatusCommand;
 import org.mediamarktsaturn.order.order.eventsource.event.OrderCreatedEvent;
 import org.mediamarktsaturn.order.order.eventsource.event.OrderStatusChangedEvent;
+import org.mediamarktsaturn.order.order.exception.OrderManagerException;
 import org.mediamarktsaturn.order.order.messaging.OrderEventsPublisher;
 import org.mediamarktsaturn.order.order.service.OrderService;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.Optional;
 
 @Component
@@ -35,6 +40,17 @@ public class OrderManagerActor extends AbstractLoggingActor {
                 .match(GetOrderPaymentInfoCommand.class, this::handleGetOrderPaymentInfoCommand)
                 .match(GetOrderShippingInfoCommand.class, this::handleGetOrderShippingInfoCommand)
                 .build();
+    }
+
+    @Override
+    public SupervisorStrategy supervisorStrategy() {
+        return new OneForOneStrategy(
+                10,
+                Duration.ofMinutes(1),
+                DeciderBuilder.match(OrderManagerException.class, e -> SupervisorStrategy.resume())
+                        .matchAny(o -> SupervisorStrategy.escalate())
+                        .build()
+        );
     }
 
     private  void handleGetOrderShippingInfoCommand(GetOrderShippingInfoCommand command) {

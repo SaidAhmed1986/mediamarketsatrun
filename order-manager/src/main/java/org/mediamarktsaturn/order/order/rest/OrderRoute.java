@@ -4,6 +4,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
+import akka.http.javadsl.server.ExceptionHandler;
+import akka.http.javadsl.server.RejectionHandler;
 import akka.http.javadsl.server.Route;
 import akka.pattern.PatternsCS;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.mediamarktsaturn.order.order.eventsource.command.GetOrderPaymentInfoC
 import org.mediamarktsaturn.order.order.eventsource.command.GetOrderShippingInfoCommand;
 import org.mediamarktsaturn.order.order.eventsource.command.RetrieveOrderCommand;
 import org.mediamarktsaturn.order.order.eventsource.command.UpdateOrderStatusCommand;
+import org.mediamarktsaturn.order.order.exception.OrderManagerException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +41,7 @@ import static akka.http.javadsl.server.Directives.put;
 import static akka.http.javadsl.server.Directives.route;
 import static akka.http.javadsl.server.PathMatchers.longSegment;
 import static akka.http.javadsl.server.PathMatchers.segment;
+import static akka.http.scaladsl.model.StatusCode.int2StatusCode;
 
 
 @Component
@@ -59,14 +63,14 @@ public class OrderRoute {
     public Route getRoute() {
         return pathPrefix("order-service",
                 () -> path("order", this::createOrder)
-                    .orElse(path(segment("order").slash(longSegment()), id -> route(concat(getOrderDetails(id), updateOrderStatus(id)))))
-                    .orElse(path(segment("order").slash(longSegment()).slash().concat("payment-info"),
-                            id -> route(getOrderPaymentInfo(id))
-                    ))
-                    .orElse(path(segment("order").slash(longSegment()).slash().concat("shipping-info"),
-                            id -> route(getOrderShippingInfo(id))
-                    ))
-        );
+                        .orElse(path(segment("order").slash(longSegment()), id -> route(concat(getOrderDetails(id), updateOrderStatus(id)))))
+                        .orElse(path(segment("order").slash(longSegment()).slash().concat("payment-info"),
+                                id -> route(getOrderPaymentInfo(id))
+                        ))
+                        .orElse(path(segment("order").slash(longSegment()).slash().concat("shipping-info"),
+                                id -> route(getOrderShippingInfo(id))
+                        ))
+        ).seal(RejectionHandler.defaultHandler(), this.createErrorResponse());
     }
 
     private Route getOrderPaymentInfo(Long orderId) {
@@ -99,7 +103,7 @@ public class OrderRoute {
 
     private Route getOrderDetails(Long id) {
         return get(() -> {
-            CompletionStage<Optional<OrderDetailsDto>> order = PatternsCS.ask(orderManagerActorRef, new RetrieveOrderCommand(id, orderManagerActorRef), timeout)
+            CompletionStage<Optional<OrderDetailsDto>> order = PatternsCS.ask(orderManagerActorRef, new RetrieveOrderCommand(id), timeout)
                     .thenApply(obj -> (Optional<OrderDetailsDto>) obj);
 
             return onSuccess(() -> order, performed -> {
@@ -118,7 +122,7 @@ public class OrderRoute {
                 return complete(StatusCodes.BAD_REQUEST, "Invalid order status");
             }
             CompletionStage<Optional<OrderDetailsDto>> updatedOrder = PatternsCS.ask(orderManagerActorRef,
-                    new UpdateOrderStatusCommand(orderId, orderStatus.get(), orderManagerActorRef), timeout
+                    new UpdateOrderStatusCommand(orderId, orderStatus.get()), timeout
             )
                     .thenApply(obj -> (Optional<OrderDetailsDto>) obj);
             return onSuccess(() -> updatedOrder, performed -> complete(StatusCodes.ACCEPTED, performed.get(), Jackson.marshaller()));
@@ -127,11 +131,19 @@ public class OrderRoute {
 
     private Route createOrder() {
         return route(post(() -> entity(Jackson.unmarshaller(OrderDetailsDto.class), order -> {
-            CompletionStage<OrderDetailsDto> orderCreated = PatternsCS.ask(orderManagerActorRef, new CreateOrderCommand(order, orderManagerActorRef), timeout)
+            CompletionStage<OrderDetailsDto> orderCreated = PatternsCS.ask(orderManagerActorRef, new CreateOrderCommand(order), timeout)
                     .thenApply(obj -> (OrderDetailsDto) obj);
             return onSuccess(() -> orderCreated, performed -> complete(StatusCodes.CREATED,
                     new CreateOrderResponse(performed.getId(), paymentRedirectURL), Jackson.marshaller()
             ));
         })));
+    }
+
+    private ExceptionHandler createErrorResponse() {
+        return ExceptionHandler.newBuilder()
+                .match(OrderManagerException.class, exception ->
+                        complete(int2StatusCode(exception.getStatusCode()), exception.getMessage()))
+                .matchAny(ex -> complete(StatusCodes.BAD_REQUEST, ex.getMessage()))
+                .build();
     }
 }
