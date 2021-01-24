@@ -1,3 +1,9 @@
 
 .DS_Store
 order-manager/data/db/order-manager-db.mv.db
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
