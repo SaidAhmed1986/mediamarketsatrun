@@ -1,8 +1,54 @@
 # docker network create --attachable --subnet 192.168.16.0/24 -d bridge analytics
-version: '3.7'
+version: '3.8'
 
 services:
+  order-manager-service:
+    container_name: order-manager-service
+    build:
+      context: ./order-manager
+    depends_on:
+      - order-manager-db
+      - kafka
+    networks:
+      - backend
+    environment:
+      DB_HOST: order-fulfillment-db
+      KAFKA_BROKERS: kafka
+  order-fulfillment-service:
+    container_name: order-fulfillment-service
+    build:
+      context: ./fulfillment-service
+    depends_on:
+      - order-fulfillment-db
+      - kafka
+    networks:
+      - backend
+    environment:
+      DB_HOST: order-fulfillment-db
+      DB_PORT: 3307
+      KAFKA_BROKERS: kafka
+  order-fulfillment-db:
+    container_name: order-fulfillment-db
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'order-fulfillment-db'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'admin'
+      MYSQL_ROOT_PASSWORD: 'admin'
+    ports:
+      - target: 3306
+        published: 3307
+        protocol: tcp
+        mode: host
+    expose:
+      - '3307'
+    volumes:
+      - order-fulfillment-db:/var/lib/mysql
+    networks:
+      - backend
   order-manager-db:
+    container_name: order-manager-db
     image: mysql:8.0
     restart: always
     environment:
@@ -52,6 +98,7 @@ services:
 
 volumes:
   order-manager-db:
+  order-fulfillment-db:
 networks:
   backend:
     name: backend
