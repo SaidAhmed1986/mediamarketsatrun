@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mediamarktsaturn.order.common.dto.OrderDetailsDto;
 import org.mediamarktsaturn.order.common.dto.OrderStatus;
+import org.mediamarktsaturn.order.common.exception.ProcessingOrderException;
 import org.mediamarktsaturn.order.repository.OrderRepository;
 import org.mediamarktsaturn.order.repository.model.Order;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,7 @@ public class OrderService {
     public OrderDetailsDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Optional<Order> existingOrderOp = orderRepository.findById(orderId);
         if (existingOrderOp.isEmpty()) {
-            throw new org.mediamarktsaturn.order.common.exception.ProcessingOrderException("Order with id " + orderId + " does not exist", 404);
+            throw new ProcessingOrderException("Order with id " + orderId + " does not exist", 404);
         }
         Order existingOrder = existingOrderOp.get();
         existingOrder.setStatus(newStatus);
